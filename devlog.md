@@ -12,3 +12,10 @@ b. the goal of this session is to implement reading the command line inputs and 
 # May 9 12:40am
 a. i reached the goal of this session by setting up the main() function and the separate functions i need to implement. i also included the prof's code for the bytes to big-endian order conversions. next session, i plan on starting the create function and figuring out how to use the prof's code while implementing the create_file() function. 
 ---------------------------------------
+# May 10 1:11pm
+a. since the last session, i thought about how to start implementing the create_file(). i wanted to test if the commands are being read properly before moving on to implementing the create_file() function. i think i will start with the magic number and checking if the file already exists or not. if the file doesnt exist, then i will create a new file and copy over the magic number, root node block, and the next block.
+b. the goal of this session is to finish implementing the create_file() function and start with one of the other functions. i think insert would be the hardest/most time consuming function so i will start with other simplier functions so that i can get more things done today. 
+
+# May 10 2:26pm
+a. i think i finished implementing the create_file() and using the functions the professor gave us for the byte conversions. i was not able to start the other functions, but my plan of action is to start the search, print, laod, and extract, in that order. i also changed some variable assignments in main() to make it simplier and take up less memory.
+---------------------------------------

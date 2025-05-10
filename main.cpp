@@ -2,8 +2,14 @@
 #include <stdint.h>
 #include <fstream>
 #include <string>
+#include <cstdio>  // or <stdio.h>
 
 using namespace std;
+
+const int BLOCK_SIZE = 512;
+
+//magic number in ASCII to put at beginning of each index file
+const uint8_t MAGIC[8] = {'4', '3', '4', '8', 'P', 'R', 'J', '3'};
 
 //----prof given functions----
 int is_bigendian() {
@@ -20,7 +26,51 @@ uint64_t reverse_bytes(uint64_t x) {
 }
 //----------------------------
 
-void create_file(string& filename) {}
+bool file_exists(string& filename) {   //check if file exists or not
+    FILE* file = fopen(filename.c_str(), "rb");
+    if(file){   //file exists if you can open it successfully
+        fclose(file);
+        return true;
+    }
+    return false;
+}
+
+void write_uint64_big_endian(uint64_t value, uint8_t* dest) {  //write block ids to file
+    if(!is_bigendian()){  //check if in correct form
+        value = reverse_bytes(value);   //call other function prof gave if not in the right form
+    }
+    memcpy(dest, &value, sizeof(uint64_t));   //memcpy the block id to the given location in mem
+}
+
+void create_file(string& filename) {
+    if(file_exists(filename)){   //check if file exists, exit if exists
+        cout << "error: file '" << filename << "' already exists" << endl;
+        exit(1);
+    }
+
+    ofstream out(filename, ios::binary);  //create a new file
+    if(!out){
+        cout << "error: could not create file" << endl;
+        exit(1);
+    }
+
+    uint8_t block[BLOCK_SIZE] = {0};
+
+    //copy magic number
+    memcpy(block, MAGIC, 8);
+
+    //root block ID: 0 bc file is empty
+    write_uint64_big_endian(0, block + 8);
+
+    //next block ID: 1 bc 0+1=1
+    write_uint64_big_endian(1, block + 16);
+
+    out.write(reinterpret_cast<char*>(block), BLOCK_SIZE);  //need to cast uint_8* to char* before writing
+    out.close();
+
+    cout << "created index file '" << filename << "'" << endl;
+}
+
 void insert_file(string& filename, unsigned int key, unsigned int value){} 
 void search_file(string& filename, unsigned int key){}  
 void load_file(string& filename, string& inputFilename){}  
@@ -36,14 +86,11 @@ int main(int argc, char* argv[]) {
     } 
     else if(command == "insert" && argc == 5){ //ex: project3 insert test.idx 15 100
         string filename = argv[2];
-        unsigned int key = (int)argv[3];
-        unsigned int value = (int)argv[4];
-        insert_file(filename, key, value);
+        insert_file(filename, (unsigned int)argv[3], (unsigned int)argv[4]);
     }
     else if(command == "search" && argc == 4){ //ex: project3 search test.idx 15
         string filename = argv[2];
-        unsigned int key = (int)argv[3];
-        search_file(filename, key);
+        search_file(filename, (unsigned int)argv[3]);
     }
     else if(command == "load" && argc == 4){ //ex: project3 load test.idx input.csv
         string filename = argv[2];
