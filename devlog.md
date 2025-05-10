@@ -19,3 +19,10 @@ b. the goal of this session is to finish implementing the create_file() function
 # May 10 2:26pm
 a. i think i finished implementing the create_file() and using the functions the professor gave us for the byte conversions. i was not able to start the other functions, but my plan of action is to start the search, print, laod, and extract, in that order. i also changed some variable assignments in main() to make it simplier and take up less memory.
 ---------------------------------------
+# May 10 3:22pm
+a. since the last session, i thought about how to start implementing the search_file() function. i can go ahead and start on the file checking part and checking if the file is empty. i dont think i can do the tree traversal part until after i finish the insert_file() but for now, i can just place print statements to make sure the code is working. i can do the same for the print_file() function. for the load_file() and extract_file() functions, i will have to do file checking as well for the index file and the input/output file respectively. i will also have to parse through the input file in load_file() and write to the output file in extract_file(). 
+b. the goal of this session is to set up the functionalities of the remaining functions and leaving default print statements in places where tree traversal or the insert_file() function would be used. i also want to double check that everything i have written so far works. 
+
+# May 10 4:35pm
+a. i reached my goal for this session. i was able to set up the remaining functions and write temporary print statements to check whether the code is executed for each of the functions. i realized that load_file and extract_file have similar code while search_file and print_file are similar. this made it a bit easier to write since some of the code was repeated from other functions. i didnt get a chance to run the code so far and test if the temp print statements are being printed yet. next session, i will run the current code i have and start working on the insert function and tree traversal for the functions i already started. 
+---------------------------------------
