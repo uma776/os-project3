@@ -43,3 +43,12 @@ a. i finished writing the read_node() function. i really had to keep in mind the
 # May 11 8:49pm
 a. i think i finished the insert_file() function and some helper functions. i didnt have enough time to check my work yet. i will check it next session later today. i didnt implement the split nodes yet and im not sure if i will have time to but hopefully everything else works. 
 ---------------------------------------
+# May 11 10:33pm
+a. before implementing the rest of the split nodes i wanted to check the code i have so far just in case i dont end up finishing the spliting functionality.
+b. the goal of this session is to finish up the project and test out the code. 
+
+# May 11 11:02pm
+a. i finished the splitting of the node when the node to split is a parent node. i did not have time to do spliting on a child node. but the way i would implement this is by checking if the node is a children node and then searching through the keys of the child node and finding the correct place to insert the new key,value pair. after this, i would check if i need to split the node and perform the split similarily to how i did it for the parent node. 
+
+# May 11 11:32pm
+i think i was able to implement everything. i will be submitting my project now. 

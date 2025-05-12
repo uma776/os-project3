@@ -27,7 +27,7 @@ uint64_t reverse_bytes(uint64_t x) {
 }
 //----------------------------
 
-bool file_exists(string& filename) {   //check if file exists or not
+bool file_exists(string& filename){   //check if file exists or not
     FILE* file = fopen(filename.c_str(), "rb");
     if(file){   //file exists if you can open it successfully
         fclose(file);
@@ -36,14 +36,14 @@ bool file_exists(string& filename) {   //check if file exists or not
     return false;
 }
 
-void write_val(uint64_t value, uint8_t* dest) {  //write block ids to file
+void write_val(uint64_t value, uint8_t* dest){  //write block ids to file
     if(!is_bigendian()){  //check if in correct form
         value = reverse_bytes(value);   //call other function prof gave if not in the right form
     }
     memcpy(dest, &value, sizeof(uint64_t));   //memcpy the block id to the given location in mem
 }
 
-bool file_is_valid(string& filename) {
+bool file_is_valid(string& filename){
     ifstream in(filename, ios::binary);
     if(!in){   //if file dne
         return false;
@@ -54,7 +54,7 @@ bool file_is_valid(string& filename) {
     return string(magic, 8) == "4348PRJ3";
 }
 
-uint64_t read_val(istream& in) {
+uint64_t read_val(istream& in){
     uint64_t value;
     in.read(reinterpret_cast<char*>(&value), sizeof(value));
 
@@ -65,7 +65,7 @@ uint64_t read_val(istream& in) {
     return value;
 }
 
-struct BTreeNode {   //class for a b tree node
+struct BTreeNode{   //class for a b tree node
     uint64_t block_id;
     uint64_t parent_id;
     uint64_t num_pairs;
@@ -77,7 +77,7 @@ struct BTreeNode {   //class for a b tree node
     }
 };
 
-BTreeNode read_node(istream& in, uint64_t block_id) {
+BTreeNode read_node(istream& in, uint64_t block_id){
     BTreeNode node;
     uint8_t buffer[BLOCK_SIZE];   //will hold binary data of the block
 
@@ -129,7 +129,7 @@ BTreeNode read_node(istream& in, uint64_t block_id) {
     return node;
 }
 
-void create_file(string& filename) {
+void create_file(string& filename){
     if(file_exists(filename)){   //check if file exists, exit if exists
         cout << "error: file '" << filename << "' already exists" << endl;
         exit(1);
@@ -158,7 +158,7 @@ void create_file(string& filename) {
     cout << "created index file '" << filename << "'" << endl;
 }
 
-void write_node(fstream& io, BTreeNode& node) {
+void write_node(fstream& io, BTreeNode& node){
     uint8_t buffer[BLOCK_SIZE] = {0};
     uint64_t temp;
 
@@ -198,7 +198,7 @@ void write_node(fstream& io, BTreeNode& node) {
     io.write(reinterpret_cast<char*>(buffer), BLOCK_SIZE);  //write binary data in buffer to file
 }
 
-void insert_into_leaf(BTreeNode& node, uint64_t key, uint64_t value) {
+void insert_into_leaf(BTreeNode& node, uint64_t key, uint64_t value){
     int pos = 0;
     while((pos < node.keys.size()) && (key > node.keys[pos])){  //find correct key pos to insert
         pos++;
@@ -251,8 +251,67 @@ void insert_file(string& filename, unsigned int key, unsigned int value){
         write_node(io, node);
         cout << "inserted key " << key << " into root" << endl;
     } 
-    else{  //TODO: split node
-        cout << "Root is full — node splitting not yet implemented" << endl;
+    else{  //split node
+        BTreeNode left, right;   //create new left and right nodes
+
+        left.block_id = next_id++;
+        right.block_id = next_id++;
+        left.parent_id = next_id;  //new root will be next id
+        right.parent_id = next_id;
+
+        //copy keys, values to left node
+        for (int i = 0; i < 9; i++){
+            left.keys.push_back(node.keys[i]);
+            left.values.push_back(node.values[i]);
+        }
+
+        for (int i = 10; i < 19; i++){   //copy keys, values to right node
+            right.keys.push_back(node.keys[i]);
+            right.values.push_back(node.values[i]);
+        }
+
+        left.num_pairs = left.keys.size();
+        right.num_pairs = right.keys.size();
+
+        //keep track of middle key
+        uint64_t mid_key = node.keys[9];
+        uint64_t mid_value = node.values[9];
+
+        //make new root node
+        BTreeNode new_root;
+        new_root.block_id = next_id++;
+        new_root.parent_id = 0;
+        new_root.num_pairs = 1;
+        new_root.keys.push_back(mid_key);
+        new_root.values.push_back(mid_value);
+        new_root.children.push_back(left.block_id);
+        new_root.children.push_back(right.block_id);
+
+        //change parent id of children nodes
+        left.parent_id = new_root.block_id;
+        right.parent_id = new_root.block_id;
+
+        //write new nodes to index file
+        write_node(io, left);
+        write_node(io, right);
+        write_node(io, new_root);
+
+        //update header with new root ID, next block ID
+        io.seekp(8);
+        uint64_t root_be = is_bigendian() ? new_root.block_id : reverse_bytes(new_root.block_id);
+        uint64_t next_be = is_bigendian() ? next_id : reverse_bytes(next_id);
+        io.write(reinterpret_cast<char*>(&root_be), 8);
+        io.write(reinterpret_cast<char*>(&next_be), 8);
+
+        //insert the key into the correct node
+        if(key < mid_key){
+            insert_into_leaf(left, key, value);
+            write_node(io, left);
+        } 
+        else{
+            insert_into_leaf(right, key, value);
+            write_node(io, right);
+        }
     }
 } 
 
@@ -404,7 +463,7 @@ void extract_file(string& filename, string& outputFilename){
     cout << "extract_file(): extracted to " << outputFilename << endl;
 }  
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[]){
     string command = argv[1];
 
     if(command == "create" && argc == 3){ //ex: project3 create test.idx
