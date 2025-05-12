@@ -33,3 +33,13 @@ b. the goal of this session is to first test out the current code i have to make
 # May 10 1:01am
 a. i tried to run main() but ran into some errors when it comes to char* to unsigned int conversions. to fix this error, i made the values of type uint64_t (unsigned long long) which ended up working. i tested out the user inputs to make sure the correct temporary values were being printed. after this, i started working on implementing the tree traversal. i think i was able to do the tree traversal for search and print. i created a new struct for a b-tree node and a new function called print_traversal() to make it easier for the print_file function. i also learned what goto is in c++, and i used it for the first time. i didnt get time to test out if my code works at this point. i still need to implement the read_node() function i left in the search and print functions tho. for this function, it will read the current node so that it is easier to access the different attributes of the node within the search and print functions. next session, i plan on finishing the read_node() function and testing out how my code works so far. 
 ---------------------------------------
+# May 11 6:14pm
+a. since the last session, i thought about how to finish implementing the read_node() function. the main purpose of this function is to make the tree traversal easy to read and to get all of the tree node's attributes before using it in tree traversal. 
+b. the goal of this session is to finish the read_node() function and review all parts of the code. if i still have time, i will test out the code and debug any issues i have. 
+
+# May 11 7:04pm
+a. i finished writing the read_node() function. i really had to keep in mind the structure of the index files when implementing this because of the offset and being consious about how many bytes i am reading with each call. now, that i finish up all the code and skimmed thru the rest of the exisiting code, i will test out the functionality of my code so far. i completely forgot about the insert_file() function, so i will work on that now first. 
+
+# May 11 8:49pm
+a. i think i finished the insert_file() function and some helper functions. i didnt have enough time to check my work yet. i will check it next session later today. i didnt implement the split nodes yet and im not sure if i will have time to but hopefully everything else works. 
+---------------------------------------

@@ -54,7 +54,7 @@ bool file_is_valid(string& filename) {
     return string(magic, 8) == "4348PRJ3";
 }
 
-uint64_t read_val(ifstream& in) {
+uint64_t read_val(istream& in) {
     uint64_t value;
     in.read(reinterpret_cast<char*>(&value), sizeof(value));
 
@@ -76,6 +76,58 @@ struct BTreeNode {   //class for a b tree node
         return children.empty();
     }
 };
+
+BTreeNode read_node(istream& in, uint64_t block_id) {
+    BTreeNode node;
+    uint8_t buffer[BLOCK_SIZE];   //will hold binary data of the block
+
+    in.seekg(block_id * BLOCK_SIZE);  //offset file pointer
+    in.read(reinterpret_cast<char*>(buffer), BLOCK_SIZE);   //read in data
+
+    if(in.gcount() < BLOCK_SIZE){   //check if read all 512 bytes
+        cout << "error: failed to read block " << block_id << endl;
+        exit(1);
+    }
+
+    //first 8 bytes are block id
+    uint64_t temp;
+    memcpy(&temp, buffer, 8);
+    node.block_id = is_bigendian() ? temp : reverse_bytes(temp);  //if not already, convert to big endian
+
+    //next 8 bytes are parent id
+    memcpy(&temp, buffer + 8, 8);
+    node.parent_id = is_bigendian() ? temp : reverse_bytes(temp);
+
+    //next 8 bytes are num_pairs
+    memcpy(&temp, buffer + 16, 8);
+    node.num_pairs = is_bigendian() ? temp : reverse_bytes(temp);
+
+    //read the key array, starts at 24 bytes
+    int offset = 24;
+    for(int i = 0; i < node.num_pairs; i++){   //for each key(8 bytes)
+        memcpy(&temp, buffer + offset, 8);  //copy the key
+        node.keys.push_back(is_bigendian() ? temp : reverse_bytes(temp));  //convert to big endian if needed
+        offset += 8;  //move file pointer to next key
+    }
+
+    for(int i = 0; i < node.num_pairs; i++){  //for each value(8 bytes)
+        memcpy(&temp, buffer + offset, 8);  //copy the val
+        node.values.push_back(is_bigendian() ? temp : reverse_bytes(temp));  //convert to big endian if needed
+        offset += 8;  //move file pointer to next val
+    }
+
+    //stop if all 512 bytes are read or if enough children are reached
+    while((offset + 8 <= BLOCK_SIZE) && (node.children.size() <= node.num_pairs)){
+        memcpy(&temp, buffer + offset, 8);  //read child pointers
+        uint64_t child = is_bigendian() ? temp : reverse_bytes(temp);  //convert to big endian if needed
+        if(child != 0){
+            node.children.push_back(child);
+        }
+        offset += 8;
+    }
+
+    return node;
+}
 
 void create_file(string& filename) {
     if(file_exists(filename)){   //check if file exists, exit if exists
@@ -106,7 +158,103 @@ void create_file(string& filename) {
     cout << "created index file '" << filename << "'" << endl;
 }
 
-void insert_file(string& filename, unsigned int key, unsigned int value){} 
+void write_node(fstream& io, BTreeNode& node) {
+    uint8_t buffer[BLOCK_SIZE] = {0};
+    uint64_t temp;
+
+    //make block id into big endian and write to file
+    temp = is_bigendian() ? node.block_id : reverse_bytes(node.block_id);
+    memcpy(buffer, &temp, 8);
+
+    //make parent id into big endian and write to file
+    temp = is_bigendian() ? node.parent_id : reverse_bytes(node.parent_id);
+    memcpy(buffer + 8, &temp, 8);
+
+    //make num_pairs into big endian and write to file
+    temp = is_bigendian() ? node.num_pairs : reverse_bytes(node.num_pairs);
+    memcpy(buffer + 16, &temp, 8);
+
+    int offset = 24;  //offset to key array
+
+    for(int i = 0; i < node.keys.size(); i++){   //write keys
+        temp = is_bigendian() ? node.keys[i] : reverse_bytes(node.keys[i]);
+        memcpy(buffer + offset, &temp, 8);
+        offset += 8;
+    }
+
+    for(int i = 0; i < node.values.size(); i++){   //write values
+        temp = is_bigendian() ? node.values[i] : reverse_bytes(node.values[i]);
+        memcpy(buffer + offset, &temp, 8);
+        offset += 8;
+    }
+
+    for(int i = 0; i < node.children.size(); i++) {   //write children
+        temp = is_bigendian() ? node.children[i] : reverse_bytes(node.children[i]);
+        memcpy(buffer + offset, &temp, 8);
+        offset += 8;
+    }
+
+    io.seekp(node.block_id * BLOCK_SIZE);   //offset
+    io.write(reinterpret_cast<char*>(buffer), BLOCK_SIZE);  //write binary data in buffer to file
+}
+
+void insert_into_leaf(BTreeNode& node, uint64_t key, uint64_t value) {
+    int pos = 0;
+    while((pos < node.keys.size()) && (key > node.keys[pos])){  //find correct key pos to insert
+        pos++;
+    }
+
+    //insert node
+    node.keys.insert(node.keys.begin() + pos, key);
+    node.values.insert(node.values.begin() + pos, value);
+    node.num_pairs++;
+}
+
+void insert_file(string& filename, unsigned int key, unsigned int value){
+    fstream io(filename, ios::in | ios::out | ios::binary);
+    if (!io.is_open()) {
+        cout << "error: failed to open index file" << endl;
+        return;
+    }
+
+    //read header
+    io.seekg(8);
+    uint64_t root_id = read_val(io);
+    uint64_t next_id = read_val(io);
+
+    if(root_id == 0){  //if no root node
+        BTreeNode root;
+        root.block_id = 1;
+        root.parent_id = 0;
+        root.num_pairs = 1;
+        root.keys.push_back(key);
+        root.values.push_back(value);
+        write_node(io, root);
+
+        //root block id in header
+        io.seekp(8);
+        uint64_t root_be = is_bigendian() ? 1 : reverse_bytes(1);
+        io.write(reinterpret_cast<char*>(&root_be), 8);
+
+        uint64_t next_be = is_bigendian() ? 2 : reverse_bytes(2);
+        io.write(reinterpret_cast<char*>(&next_be), 8);
+
+        cout << "created root node with key " << key << endl;
+        return;
+    }
+
+    //read root node
+    BTreeNode node = read_node(io, root_id);
+
+    if(node.num_pairs < 19){
+        insert_into_leaf(node, key, value);
+        write_node(io, node);
+        cout << "inserted key " << key << " into root" << endl;
+    } 
+    else{  //TODO: split node
+        cout << "Root is full — node splitting not yet implemented" << endl;
+    }
+} 
 
 void search_file(string& filename, unsigned int key){
     if(!file_is_valid(filename)){  //check if file is valid
